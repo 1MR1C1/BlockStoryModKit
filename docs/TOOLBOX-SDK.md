@@ -10,7 +10,6 @@ The mod system is modular (Forge-style):
 BlockStoryCore.dll   ← the toolbox / loader / shared API   (REQUIRED, load it once)
   ├─ VeinMiner.dll   ← each feature is its own droppable mod
   ├─ Xray.dll
-  ├─ Multiplayer.dll
   └─ <your mod>.dll  ← you build this; it depends on Core
 ```
 
@@ -116,8 +115,7 @@ ModRegistry.Register(new ModInfo {
 ```csharp
 MainMenuRegistry.Add("MyButton", "My Button", () => MyPage.Open(), width: 1.0f);
 ```
-Buttons lay out in a 2-row grid extending the menu; `width` widens the wood box for long labels
-(e.g. `1.8f` for "Multiplayer").
+Buttons lay out in a 2-row grid extending the menu; `width` widens the wood box for long labels.
 
 ### `Theme` — shared IMGUI skin (the wood/parchment look)
 `Theme.Build()` (call once per OnGUI before using), then styles: `Window, Label, LabelGold, Button,

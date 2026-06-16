@@ -58,4 +58,4 @@ docs/
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+All rights reserved — see [LICENSE](LICENSE). You're welcome to download and use the app, but please don't redistribute, modify, sell, or rebrand it without permission.

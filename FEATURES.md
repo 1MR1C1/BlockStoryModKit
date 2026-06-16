@@ -77,15 +77,9 @@ total-conversion / overhaul mods:
 - **BSPatch** — easy Harmony patching to hook or replace any game method.
 - Full SDK reference included (`docs/TOOLBOX-SDK.md`).
 
-## 7. Multiplayer mod sync (with the Multiplayer mod)
-If you add the Multiplayer mod (Steam P2P, friend-to-friend — distributed separately), the kit ties in:
-- **Sync my mods to friends** — sends your installed mods (including ones you built here) to everyone in the
-  session; they opt in with **Accept friends' mods** and restart. Build a mod and play it together.
+> Note: this beta ships the **tool only** — no mods are bundled. You make your own (by hand or with the AI).
 
-> Note: this beta ships the **tool only** — no mods are bundled. You make your own (by hand or with the AI),
-> and feature mods are distributed separately.
-
-## 8. Platform & extras
+## 7. Platform & extras
 - **Windows + Linux/Proton + Steam Deck.**
 - **GUI app** and a **command-line tool** (`modkit`) for terminal/scripting users.
 - Custom app icon; single-file, self-contained builds (no separate runtime to install to run the app).
@@ -99,8 +93,7 @@ If you add the Multiplayer mod (Steam P2P, friend-to-friend — distributed sepa
 - To use the **AI Builder**: one backend — a Claude subscription (via Claude Code), an Anthropic/OpenAI API key, or local Ollama.
 
 ## Known limitations (beta)
-- Mods load at game **startup** only — installing/syncing a mod takes effect on the next restart (no hot-reload).
-- **Mod sync runs someone else's code** — it's opt-in and intended for **trusted friends only**.
+- Mods load at game **startup** only — installing a mod takes effect on the next restart (no hot-reload).
 - AI-generated mods always **compile** before installing, but you should still review what they do; quality
   depends on the backend (cloud models are stronger than small local ones).
 - GPU VRAM auto-detection covers NVIDIA, AMD, and Intel on Linux; unknown setups fall back to a RAM-based pick.
