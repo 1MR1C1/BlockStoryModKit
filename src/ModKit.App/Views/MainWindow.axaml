@@ -1,0 +1,300 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ModKit.App.ViewModels"
+        xmlns:core="using:ModKit.Core"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="820" d:DesignHeight="600"
+        x:Class="ModKit.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="860" Height="660" MinWidth="660" MinHeight="500"
+        DragDrop.AllowDrop="True"
+        Icon="/Assets/modkit.ico"
+        Title="Block Story Mod Kit  —  v1.0 (beta)">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <DockPanel Margin="0">
+        <!-- status bar -->
+        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Padding="10,6">
+            <TextBlock Text="{Binding Status}" Foreground="#cccccc"/>
+        </Border>
+
+        <TabControl Margin="8" SelectedIndex="{Binding SelectedTab}">
+            <!-- ===================== LAUNCHER ===================== -->
+            <TabItem Header="Launcher">
+                <DockPanel Margin="6">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                        <Button Content="▶  Play" Command="{Binding PlayCommand}" Padding="16,8" FontWeight="Bold"/>
+                        <Button Content="Refresh" Command="{Binding RefreshModsCommand}"/>
+                        <Button Content="Install mod / pack…" Click="InstallModFile"/>
+                        <Button Content="Install from folder…" Click="InstallModFolder"/>
+                        <Button Content="Open plugins folder" Command="{Binding OpenPluginsCommand}"/>
+                        <Button Content="Open log" Command="{Binding OpenLogCommand}"/>
+                        <Button Content="Backup mods" Command="{Binding BackupModsCommand}"/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                        <Button Content="Check hotkey conflicts" Command="{Binding CheckConflictsCommand}"/>
+                        <Button Content="Check for updates" Command="{Binding CheckUpdatesCommand}"/>
+                        <Button Content="Bug report" Command="{Binding MakeBugReportCommand}"/>
+                    </StackPanel>
+                    <!-- profiles: save / apply a named set of enabled mods -->
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+                        <TextBlock Text="Profile:" VerticalAlignment="Center" Opacity="0.8"/>
+                        <ComboBox ItemsSource="{Binding ProfileNames}" SelectedItem="{Binding SelectedProfile}" Width="150"/>
+                        <Button Content="Apply" Command="{Binding ApplyProfileCommand}"/>
+                        <Button Content="Delete" Command="{Binding DeleteProfileCommand}"/>
+                        <TextBox Text="{Binding NewProfileName}" Watermark="new profile name" Width="150"/>
+                        <Button Content="Save current" Command="{Binding SaveProfileCommand}"/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+                        <TextBlock Text="Search:" VerticalAlignment="Center" Opacity="0.8"/>
+                        <TextBox Text="{Binding ModSearch}" Watermark="filter mods…" Width="240"/>
+                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Installed mods — tick to enable (restart the game to apply).  Tip: drag a .dll / .zip / folder anywhere onto this window to install it."
+                               Margin="2,0,0,6" Opacity="0.8" TextWrapping="Wrap"/>
+                    <Border BorderBrush="#333" BorderThickness="1" CornerRadius="4">
+                        <ListBox ItemsSource="{Binding Mods}" Background="Transparent">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ModRow">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <CheckBox Grid.Column="0" Content="{Binding Display}" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanToggle}"/>
+                                        <Button Grid.Column="1" Content="Uninstall" IsEnabled="{Binding CanToggle}" Click="UninstallModClick"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ===================== BUILDER ===================== -->
+            <TabItem Header="Mod Builder">
+                <DockPanel Margin="6">
+                    <!-- AI builder: describe it in plain English, the AI writes + self-fixes + installs it -->
+                    <Border DockPanel.Dock="Top" BorderBrush="#3a5" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10" Background="#11203018">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="🤖  AI Builder — describe a mod, let AI write it" FontWeight="Bold"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBox Text="{Binding AiModName}" Watermark="Mod name" Width="170"/>
+                                <TextBlock Text="Backend:" VerticalAlignment="Center" Opacity="0.8"/>
+                                <ComboBox ItemsSource="{Binding AiProviders}" SelectedItem="{Binding AiProvider}" Width="120"/>
+                                <TextBlock Text="(keys/model in Settings)" VerticalAlignment="Center" Opacity="0.55" FontSize="12"/>
+                            </StackPanel>
+                            <TextBox Text="{Binding AiPrompt}" AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap"
+                                     Watermark="e.g. Give me a speed boost while I hold F, and a small on-screen note when it's active."/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="✨  Build with AI" Command="{Binding GenerateModWithAiCommand}" FontWeight="Bold" IsEnabled="{Binding !AiBusy}"/>
+                                <TextBlock Text="Writes the code → compiles → if it errors, the AI fixes itself (up to 3 tries) → installs." VerticalAlignment="Center" Opacity="0.6" FontSize="12"/>
+                            </StackPanel>
+
+                            <!-- chat: refine the SAME mod with follow-ups (appears after the first build) -->
+                            <Border BorderBrush="#2c4" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,4,0,0" IsVisible="{Binding AiHasSession}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Conversation — refine it:" Opacity="0.8" FontSize="12"/>
+                                    <Border BorderBrush="#333" BorderThickness="1" CornerRadius="4" MaxHeight="130">
+                                        <ScrollViewer>
+                                            <TextBox Text="{Binding AiTranscript}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                                                     Background="Transparent" BorderThickness="0" FontSize="12"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBox Text="{Binding AiChatInput}" Width="520" TextWrapping="Wrap"
+                                                 Watermark="e.g. make the boost stronger, and play a sound when it starts"/>
+                                        <Button Content="Send" Command="{Binding SendAiMessageCommand}" IsEnabled="{Binding !AiBusy}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+                        <TextBlock Text="Or build by hand:" FontWeight="Bold" Margin="0,0,0,2"/>
+                        <TextBlock Text="1. Workspace (where your mod source lives — leave blank and it's auto-created on first build):" Opacity="0.8"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBox Text="{Binding WorkspaceDir}" Watermark="…/my-blockstory-mods" Width="520"/>
+                            <Button Content="Browse" Click="BrowseWorkspace"/>
+                            <Button Content="Set up workspace" Command="{Binding InitWorkspaceCommand}"/>
+                            <Button Content="Open folder" Command="{Binding OpenWorkspaceCommand}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding SetupInfo}" Opacity="0.75" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding DotnetInfo}" Opacity="0.75" Margin="0,0,0,2"/>
+                        <TextBlock Text="2. New mod — pick a pre-coded starter, name it, then Make my mod:" Opacity="0.8" Margin="0,6,0,0"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBox Text="{Binding NewModName}" Watermark="Name (e.g. SuperJump)" Width="170"/>
+                            <TextBox Text="{Binding NewModDescription}" Watermark="Short description" Width="250"/>
+                            <ComboBox ItemsSource="{Binding TemplateChoices}" SelectedItem="{Binding NewModTemplate}" Width="150"/>
+                            <Button Content="✨  Make my mod" Command="{Binding CreateAndBuildCommand}" FontWeight="Bold"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding TemplateBlurb}" TextWrapping="Wrap" Opacity="0.7" FontSize="12" Margin="0,2,0,0"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+                            <TextBlock Text="3. Your mods (select one):" Opacity="0.8" VerticalAlignment="Center"/>
+                            <Button Content="Refresh" Command="{Binding RefreshWorkspaceModsCommand}"/>
+                            <Button Content="View code" Command="{Binding ViewCodeCommand}"/>
+                            <Button Content="🤖 Explain" Command="{Binding ExplainModCommand}" IsEnabled="{Binding !AiBusy}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border DockPanel.Dock="Top" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Height="150" Margin="0,0,0,8">
+                        <ListBox ItemsSource="{Binding WorkspaceModItems}" SelectedItem="{Binding SelectedWorkspaceMod}" Background="Transparent">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="core:WorkspaceMod">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" Margin="2">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding Display}"/>
+                                        <Button Grid.Column="1" Content="Edit" Margin="4,0,0,0"
+                                                Command="{Binding ((vm:MainWindowViewModel)DataContext).EditModCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <Button Grid.Column="2" Content="Rebuild + Install" Margin="4,0,0,0"
+                                                Command="{Binding ((vm:MainWindowViewModel)DataContext).RebuildModCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <Button Grid.Column="3" Content="🤖 AI fix" Margin="4,0,0,0"
+                                                Command="{Binding ((vm:MainWindowViewModel)DataContext).AiFixModCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <Button Grid.Column="4" Content="Folder" Margin="4,0,0,0"
+                                                Command="{Binding ((vm:MainWindowViewModel)DataContext).OpenModFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <Button Grid.Column="5" Content="Delete" Margin="4,0,0,0" Click="DeleteModClick"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+
+                    <TextBlock DockPanel.Dock="Top" Text="Build output (compiler messages — read-only log; watch here for ✓ success or errors):" Opacity="0.8" Margin="2,4,0,4"/>
+                    <Border BorderBrush="#333" BorderThickness="1" CornerRadius="4">
+                        <ScrollViewer>
+                            <TextBox Text="{Binding BuildLog}" IsReadOnly="True" AcceptsReturn="True"
+                                     FontFamily="Cascadia Code,Consolas,monospace" FontSize="12"
+                                     Background="Transparent" BorderThickness="0"/>
+                        </ScrollViewer>
+                    </Border>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ===================== SETTINGS ===================== -->
+            <TabItem Header="Settings">
+                <StackPanel Margin="10" Spacing="10" MaxWidth="640" HorizontalAlignment="Left">
+                    <TextBlock Text="Game folder (…/steamapps/common/BlockStory):" Opacity="0.8"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBox Text="{Binding GameDir}" Width="520"/>
+                        <Button Content="Browse" Click="BrowseGame"/>
+                        <Button Content="Auto-detect" Command="{Binding DetectGameCommand}"/>
+                        <Button Content="Open folder" Command="{Binding OpenGameFolderCommand}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="dotnet path (leave blank if on PATH):" Opacity="0.8" Margin="0,6,0,0"/>
+                    <TextBox Text="{Binding DotnetPath}" Watermark="/home/you/.dotnet/dotnet" Width="520" HorizontalAlignment="Left"/>
+
+                    <TextBlock Text="Code editor command for the 'Edit' button (blank = OS default; e.g. code):" Opacity="0.8" Margin="0,6,0,0"/>
+                    <TextBox Text="{Binding EditorCmd}" Watermark="code" Width="260" HorizontalAlignment="Left"/>
+
+                    <TextBlock Text="'Check for updates' folder (a folder of newer mod .dlls, e.g. a synced/share folder):" Opacity="0.8" Margin="0,6,0,0"/>
+                    <TextBox Text="{Binding ShareDir}" Watermark="…/BlockStoryMods_Share" Width="520" HorizontalAlignment="Left"/>
+
+                    <Border BorderBrush="#3a5" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,12,0,0">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="🤖  AI Builder backend" FontWeight="Bold"/>
+                            <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
+                                       Text="Pick a backend. 'Claude Code' uses your existing Claude subscription via the installed CLI — no API key. Or bring your own Anthropic/OpenAI API key, or run a local model with Ollama (free, offline). Keys are stored in your local config only. AI-generated code runs in your game — review it before sharing mods."/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Backend:" VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding AiProviders}" SelectedItem="{Binding AiProvider}" Width="140"/>
+                            </StackPanel>
+                            <TextBlock Text="Claude Code (your subscription — no API key) model alias:" Opacity="0.8" Margin="0,4,0,0"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBox Text="{Binding ClaudeCodeModel}" Width="190"/>
+                                <TextBlock Text="e.g. sonnet, opus, haiku. Needs the 'claude' CLI installed + signed in." VerticalAlignment="Center" Opacity="0.55" FontSize="12"/>
+                            </StackPanel>
+                            <TextBlock Text="Anthropic (Claude) API key + model:" Opacity="0.8" Margin="0,4,0,0"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBox Text="{Binding AnthropicKey}" Watermark="sk-ant-…" PasswordChar="•" Width="320"/>
+                                <TextBox Text="{Binding AnthropicModel}" Width="190"/>
+                            </StackPanel>
+                            <TextBlock Text="OpenAI API key + model:" Opacity="0.8" Margin="0,4,0,0"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBox Text="{Binding OpenAiKey}" Watermark="sk-…" PasswordChar="•" Width="320"/>
+                                <TextBox Text="{Binding OpenAiModel}" Width="190"/>
+                            </StackPanel>
+                            <TextBlock Text="Ollama (local) endpoint + model:" Opacity="0.8" Margin="0,4,0,0"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBox Text="{Binding OllamaEndpoint}" Width="220"/>
+                                <TextBox Text="{Binding OllamaModel}" Width="150"/>
+                                <Button Content="Auto-pick for my PC" Command="{Binding RecommendLocalModelCommand}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                                <Button Content="⬇  Set up free local AI" Command="{Binding SetupLocalAiCommand}" FontWeight="Bold" IsEnabled="{Binding !AiBusy}"/>
+                                <TextBlock Text="Installs Ollama + downloads the model (a few GB, once). No API key, runs offline. Progress shows in the Mod Builder's Build output." VerticalAlignment="Center" Opacity="0.6" FontSize="12" TextWrapping="Wrap" MaxWidth="380"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="Save settings" Command="{Binding SaveSettingsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+
+                    <TextBlock Margin="0,16,0,0" TextWrapping="Wrap" Opacity="0.7"
+                               Text="Mod Builder reference + the Core toolbox API are documented in docs/TOOLBOX-SDK.md."/>
+                </StackPanel>
+            </TabItem>
+
+            <!-- ===================== SETUP &amp; HELP ===================== -->
+            <TabItem Header="Setup &amp; Help">
+                <DockPanel Margin="10">
+                    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                        <TextBlock TextWrapping="Wrap" Opacity="0.85"
+                                   Text="One-time setup — installs the modding framework (BepInEx + Doorstop loader + BlockStoryCore) straight into your game, so this launcher is the only thing you need. Set the game folder in Settings first."/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Install / update framework" Command="{Binding InstallBaseCommand}" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding BaseStatus}" VerticalAlignment="Center" Opacity="0.85"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="⬇  Set up free local AI (optional)" Command="{Binding SetupLocalAiCommand}" IsEnabled="{Binding !AiBusy}"/>
+                            <TextBlock Text="Lets the AI Builder write mods for you with no API key (installs Ollama + a coding model, ~few GB, offline)." VerticalAlignment="Center" Opacity="0.65" FontSize="12" TextWrapping="Wrap" MaxWidth="430"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <TextBlock Text="Guide:" VerticalAlignment="Center"/>
+                            <ComboBox ItemsSource="{Binding GuideNames}" SelectedItem="{Binding SelectedGuide}" Width="220"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Border BorderBrush="#333" BorderThickness="1" CornerRadius="4">
+                        <ScrollViewer>
+                            <TextBox Text="{Binding GuideText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                                     Background="Transparent" BorderThickness="0"
+                                     FontFamily="Cascadia Code,Consolas,monospace" FontSize="12"/>
+                        </ScrollViewer>
+                    </Border>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ===================== GAME API ===================== -->
+            <TabItem Header="Game API">
+                <DockPanel Margin="8">
+                    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,6">
+                        <TextBlock TextWrapping="Wrap" Opacity="0.85"
+                                   Text="The real classes, methods, fields and IDs inside Block Story (read straight from the game's DLLs). Browse them yourself when writing a mod — and the AI Builder uses the matching ones automatically so it references things that actually exist."/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBox Text="{Binding ApiSearch}" Watermark="search e.g. inventory, health, block, item, biome…" Width="360"/>
+                            <Button Content="Re-index (after a game update)" Command="{Binding RebuildApiCommand}"/>
+                            <TextBlock Text="{Binding ApiStatus}" VerticalAlignment="Center" Opacity="0.7" FontSize="12"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="2*,3*">
+                        <Border Grid.Column="0" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Margin="0,0,6,0">
+                            <ListBox ItemsSource="{Binding ApiResults}" SelectedItem="{Binding SelectedApiType}" Background="Transparent">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="core:ApiType">
+                                        <TextBlock Text="{Binding Display}" FontSize="12"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+                        <Border Grid.Column="1" BorderBrush="#333" BorderThickness="1" CornerRadius="4">
+                            <ScrollViewer>
+                                <TextBox Text="{Binding ApiDetail}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                                         Background="Transparent" BorderThickness="0"
+                                         FontFamily="Cascadia Code,Consolas,monospace" FontSize="12"/>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>
