@@ -22,7 +22,7 @@ and an AI that can write mods for you. Works on **Windows and Linux/Proton (incl
 - Quick buttons: open the plugins folder, open the log, check hotkey conflicts.
 
 ## 2. One-click framework setup
-- Installs the whole modding framework (BepInEx loader + the BlockStoryCore toolbox) **directly into your game** —
+- Installs the whole modding framework (the BlockStoryCore runtime) **directly into your game** —
   no separate download or manual merge.
 - Detects your Block Story folder automatically (across Steam libraries).
 - Built-in, up-to-date **guides** (README, Windows install, Linux/Proton install, how to add mods) right in the app.

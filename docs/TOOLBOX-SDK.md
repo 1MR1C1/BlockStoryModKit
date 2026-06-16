@@ -13,14 +13,14 @@ BlockStoryCore.dll   ← the toolbox / loader / shared API   (REQUIRED, load it 
   └─ <your mod>.dll  ← you build this; it depends on Core
 ```
 
-Everything runs under **BepInEx 5 (Mono)** and patches the game via **Harmony** / reflection — the
+Everything runs on the **BlockStoryCore framework (Mono)** and patches the game via **Harmony** / reflection — the
 game's own assemblies are never modified. Mods are plain Unity `MonoBehaviour` plugins that call the
 game's methods directly (mod code runs on the Unity main thread).
 
 ## Fastest path: the Mod Kit
 
 1. **Settings tab** → set the game folder (Auto-detect usually finds it).
-2. **Setup & Help tab** → **Install / update framework** — installs BepInEx + the loader + the Core toolbox
+2. **Setup & Help tab** → **Install / update framework** — installs the framework + the Core toolbox
    straight into the game (the bundle is baked into the launcher; no separate download). The guides for each
    platform are on this tab too.
 3. **Mod Builder tab** → pick a workspace folder → **Set up workspace** (copies the game's reference
@@ -91,7 +91,7 @@ namespace BlockStoryMod
 
 ### `Core`
 - `Core.Guid` — the toolbox plugin GUID; use in `[BepInDependency(Core.Guid)]`.
-- `Core.Log` — shared `ManualLogSource`; `Core.Log?.LogInfo("…")` (writes to BepInEx/LogOutput.log).
+- `Core.Log` — shared `ManualLogSource`; `Core.Log?.LogInfo("…")` (writes to the framework log).
 
 ### `BSKeybinds` — rebindable keybinds
 - `ISRef Register(string section, string label, string defaultBinding)` — registers a key; it appears in
@@ -155,17 +155,13 @@ behind your panel.
 
 ## Build + install
 
-The Mod Kit's **Create + Build + Install** does this for you. By hand:
-```
-dotnet build mods/<Name>/<Name>.csproj -c Release
-cp mods/<Name>/bin/Release/<Name>.dll  "<game>/BepInEx/plugins/"
-```
-Restart the game. Your mod shows up on the **Mods** page and its keybinds under **Settings → Controls**.
+The Mod Kit's **Create + Build + Install** builds your mod and installs it for you. Restart the game —
+your mod shows up on the **Mods** page and its keybinds under **Settings → Controls**.
 
 ## Cross-platform
 
-The same DLLs work on Windows and on Linux/Proton. On Linux, launch the game with the launch option
-`WINEDLLOVERRIDES="winhttp=n,b" %command%` so BepInEx loads.
+The same DLLs work on Windows and on Linux/Proton. The Mod Kit handles launching with the right options on
+each platform.
 
 ## CLI (`modkit`)
 

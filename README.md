@@ -54,7 +54,7 @@ docs/
 
 - A copy of Block Story (this tool does not include the game).
 - .NET 8 SDK if you're building from source or building your own mods.
-- BepInEx + BlockStoryCore installed (the base mod pack the launcher can set up for you).
+- The mod framework installed (the launcher sets this up for you in one click).
 
 ## License
 
