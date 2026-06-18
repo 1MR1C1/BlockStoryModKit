@@ -19,10 +19,25 @@ public sealed class ApiType
 
 public sealed class GameApiIndex
 {
+    // Bump when the indexing logic changes, so stale caches built by an older Mod Kit are rebuilt.
+    public const int CurrentSchema = 2;
+
     public List<ApiType> Types { get; set; } = new();
+    public int Schema { get; set; }
     public DateTime BuiltUtc { get; set; }
 
-    static readonly string[] TargetPrefixes = { "Assembly-CSharp", "Blocksters" };
+    // Index EVERY game-authored assembly so the builder/AI sees the whole game (gameplay, mob AI,
+    // behaviour trees, navigation, Steam). We exclude only the standard runtime, Unity, and 3rd-party
+    // SDKs — the AI already knows those, and indexing them would bloat the cache + AI context.
+    static readonly string[] SkipPrefixes =
+    {
+        "System", "mscorlib", "netstandard", "Mono.", "Microsoft", "Unity",
+        "Newtonsoft", "protobuf-net", "SharpZipLib", "ICSharpCode", "DropboxKit",
+        "FlurryAnalyticsLib", "OneSignalSDK", "Purchasing", "NativeGallery",
+    };
+
+    static bool SkipAssembly(string fileNameNoExt)
+        => SkipPrefixes.Any(p => fileNameNoExt.StartsWith(p, StringComparison.OrdinalIgnoreCase));
 
     public static string CachePath =>
         Path.Combine(Path.GetDirectoryName(Config.ConfigPath)!, "game-api-index.json");
@@ -37,7 +52,8 @@ public sealed class GameApiIndex
                 File.GetLastWriteTimeUtc(CachePath) >= File.GetLastWriteTimeUtc(stamp))
             {
                 var cached = JsonSerializer.Deserialize<GameApiIndex>(File.ReadAllText(CachePath));
-                if (cached != null && cached.Types.Count > 0) { onLog?.Invoke($"Loaded cached game API ({cached.Types.Count} types)."); return cached; }
+                if (cached != null && cached.Types.Count > 0 && cached.Schema == CurrentSchema)
+                { onLog?.Invoke($"Loaded cached game API ({cached.Types.Count} types)."); return cached; }
             }
         }
         catch { }
@@ -54,7 +70,7 @@ public sealed class GameApiIndex
 
     public static GameApiIndex Build(string managedDir, Action<string>? onLog = null)
     {
-        var idx = new GameApiIndex { BuiltUtc = DateTime.UtcNow };
+        var idx = new GameApiIndex { BuiltUtc = DateTime.UtcNow, Schema = CurrentSchema };
         if (!Directory.Exists(managedDir)) { onLog?.Invoke("Managed folder not found: " + managedDir); return idx; }
 
         string[] dlls = Directory.GetFiles(managedDir, "*.dll");
@@ -67,7 +83,7 @@ public sealed class GameApiIndex
         foreach (string dll in dlls)
         {
             string fn = Path.GetFileNameWithoutExtension(dll);
-            if (!TargetPrefixes.Any(p => fn.StartsWith(p, StringComparison.OrdinalIgnoreCase))) continue;
+            if (SkipAssembly(fn)) continue;
             onLog?.Invoke("Indexing " + Path.GetFileName(dll) + "…");
             Type[] types;
             try { types = mlc.LoadFromAssemblyPath(dll).GetTypes(); }

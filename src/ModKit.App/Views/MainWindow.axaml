@@ -37,9 +37,16 @@
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
                         <Button Content="Check hotkey conflicts" Command="{Binding CheckConflictsCommand}"/>
-                        <Button Content="Check for updates" Command="{Binding CheckUpdatesCommand}"/>
                         <Button Content="Bug report" Command="{Binding MakeBugReportCommand}"/>
                     </StackPanel>
+                    <!-- GitHub updates: check, update all mods, or self-update the launcher -->
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                        <Button Content="🔄  Check for updates" Command="{Binding CheckUpdatesCommand}"/>
+                        <Button Content="⬇  Update all mods" Command="{Binding UpdateAllModsCommand}"/>
+                        <Button Content="⬆  Update launcher" Command="{Binding UpdateLauncherCommand}"/>
+                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding UpdateInfo}" Margin="2,0,0,8"
+                               Opacity="0.85" FontSize="12" TextWrapping="Wrap"/>
                     <!-- profiles: save / apply a named set of enabled mods -->
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
                         <TextBlock Text="Profile:" VerticalAlignment="Center" Opacity="0.8"/>
@@ -59,9 +66,11 @@
                         <ListBox ItemsSource="{Binding Mods}" Background="Transparent">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ModRow">
-                                    <Grid ColumnDefinitions="*,Auto">
+                                    <Grid ColumnDefinitions="*,Auto,Auto">
                                         <CheckBox Grid.Column="0" Content="{Binding Display}" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanToggle}"/>
-                                        <Button Grid.Column="1" Content="Uninstall" IsEnabled="{Binding CanToggle}" Click="UninstallModClick"/>
+                                        <Button Grid.Column="1" Content="⬇ Update" IsVisible="{Binding HasUpdate}"
+                                                Command="{Binding UpdateThisModCommand}" Margin="0,0,6,0"/>
+                                        <Button Grid.Column="2" Content="Uninstall" IsEnabled="{Binding CanToggle}" Click="UninstallModClick"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -247,6 +256,12 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button Content="⬇  Set up free local AI (optional)" Command="{Binding SetupLocalAiCommand}" IsEnabled="{Binding !AiBusy}"/>
                             <TextBlock Text="Lets the AI Builder write mods for you with no API key (installs Ollama + a coding model, ~few GB, offline)." VerticalAlignment="Center" Opacity="0.65" FontSize="12" TextWrapping="Wrap" MaxWidth="430"/>
+                        </StackPanel>
+                        <StackPanel Spacing="3" Margin="0,4,0,0" IsVisible="{Binding IsLinux}">
+                            <TextBlock Text="Linux — force a Proton version (Compatibility tab), then paste this into Steam ▸ Properties ▸ Launch Options:"
+                                       Opacity="0.85" TextWrapping="Wrap" FontSize="12"/>
+                            <TextBox Text="{Binding LinuxLaunchOption}" IsReadOnly="True"
+                                     FontFamily="Cascadia Code,Consolas,monospace" FontSize="12"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                             <TextBlock Text="Guide:" VerticalAlignment="Center"/>

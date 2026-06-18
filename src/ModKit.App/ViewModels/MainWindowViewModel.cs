@@ -18,13 +18,23 @@ public partial class ModRow : ObservableObject
     public InstalledMod Mod { get; }
     public string Display => Mod.Name
         + (Mod.Version != null ? "  v" + Mod.Version : "")
-        + (Mod.IsCore ? "   (required)" : "");
+        + (Mod.IsCore ? "   (required)" : "")
+        + (HasUpdate ? $"   ⬆ v{AvailableVersion} available" : "");
     public bool CanToggle => !Mod.IsCore;
 
     [ObservableProperty] private bool _enabled;
 
+    // Set by a GitHub update check; shows the per-mod "Update" button when a newer release exists.
+    [ObservableProperty] private bool _hasUpdate;
+    [ObservableProperty] private string? _availableVersion;
+
+    partial void OnHasUpdateChanged(bool value) => OnPropertyChanged(nameof(Display));
+
     public ModRow(InstalledMod m, MainWindowViewModel owner) { Mod = m; _owner = owner; _enabled = m.Enabled; }
     partial void OnEnabledChanged(bool value) => _owner.ToggleMod(this, value);
+
+    [RelayCommand]
+    private Task UpdateThisMod() => _owner.UpdateOneMod(this);
 }
 
 public partial class MainWindowViewModel : ViewModelBase
@@ -101,6 +111,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
+        GitHubUpdater.CleanupOldBinary();   // clear a leftover .old from a previous self-update
         _cfg = Config.Load();
         _gameDir = _cfg.GameDir ?? GamePaths.AutoDetect();
         _workspaceDir = _cfg.WorkspaceDir;
@@ -172,20 +183,95 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception e) { Status = "Bug report failed: " + e.Message; }
     }
 
+    [ObservableProperty] private string _updateInfo = "";
+    [ObservableProperty] private bool _launcherHasUpdate;
+    private List<ModUpdate> _modUpdates = new();
+
+    // Check GitHub Releases for newer mod + launcher versions (downloads nothing but the tiny DLLs
+    // it needs to read their real version; installs nothing — just reports + flags the rows).
     [RelayCommand]
-    private void CheckUpdates()
+    private async Task CheckUpdates()
     {
         if (!ValidGame) { Status = "Set a valid game folder first."; return; }
-        if (string.IsNullOrWhiteSpace(ShareDir) || !Directory.Exists(ShareDir)) { Status = "Set a valid 'updates' folder in Settings first."; SelectedTab = 2; return; }
+        UpdateInfo = "Checking GitHub for updates…";
         try
         {
-            var updates = UpdateCheck.Find(GameDir!, ShareDir!);
-            if (updates.Count == 0) { Status = "All your mods are up to date. ✓"; return; }
-            foreach (var u in updates) ModManager.Install(GameDir!, u.SourcePath);
-            RefreshMods();
-            Status = $"Updated {updates.Count} mod(s): " + string.Join(", ", updates.Select(u => $"{u.Name} {u.InstalledVersion}→{u.AvailableVersion}")) + " (restart the game).";
+            _modUpdates = await GitHubUpdater.CheckMods(GameDir!);
+            var lc = await GitHubUpdater.CheckLauncher();
+            LauncherHasUpdate = lc.HasUpdate;
+            FlagModRows();
+            string mods = _modUpdates.Count == 0
+                ? "All mods up to date."
+                : $"{_modUpdates.Count} mod update(s): " + string.Join(", ", _modUpdates.Select(u => $"{u.Name} {u.InstalledVersion}→{u.AvailableVersion}"));
+            string kit = lc.HasUpdate ? $"Launcher v{lc.Current}→v{lc.Latest} available."
+                                      : (lc.Message ?? $"Launcher up to date (v{lc.Current}).");
+            UpdateInfo = mods + "   " + kit;
         }
-        catch (Exception e) { Status = "Update check failed: " + e.Message; }
+        catch (Exception e) { UpdateInfo = "Update check failed: " + e.Message; }
+    }
+
+    private void FlagModRows()
+    {
+        var byName = _modUpdates.ToDictionary(u => u.Name, u => u, StringComparer.OrdinalIgnoreCase);
+        foreach (var row in Mods)
+        {
+            bool has = byName.TryGetValue(row.Mod.Name, out var u);
+            row.AvailableVersion = has ? u!.AvailableVersion : null;
+            row.HasUpdate = has;
+        }
+    }
+
+    // Per-mod "Update" button (called from ModRow). Checks first if we haven't already.
+    public async Task UpdateOneMod(ModRow row)
+    {
+        if (!ValidGame) { Status = "Set a valid game folder first."; return; }
+        var u = _modUpdates.FirstOrDefault(x => x.Name.Equals(row.Mod.Name, StringComparison.OrdinalIgnoreCase));
+        if (u == null)
+        {
+            Status = $"Checking {row.Mod.Name}…";
+            _modUpdates = await GitHubUpdater.CheckMods(GameDir!);
+            u = _modUpdates.FirstOrDefault(x => x.Name.Equals(row.Mod.Name, StringComparison.OrdinalIgnoreCase));
+        }
+        if (u == null) { Status = $"{row.Mod.Name} is already up to date. ✓"; FlagModRows(); return; }
+        GitHubUpdater.InstallMod(u, GameDir!);
+        string done = $"Updated {u.Name} {u.InstalledVersion}→{u.AvailableVersion} (restart the game).";
+        _modUpdates.Remove(u);
+        RefreshMods();
+        FlagModRows();
+        Status = done;
+    }
+
+    [RelayCommand]
+    private async Task UpdateAllMods()
+    {
+        if (!ValidGame) { Status = "Set a valid game folder first."; return; }
+        UpdateInfo = "Checking GitHub for mod updates…";
+        try
+        {
+            _modUpdates = await GitHubUpdater.CheckMods(GameDir!);
+            if (_modUpdates.Count == 0) { UpdateInfo = "All mods are already up to date. ✓"; FlagModRows(); return; }
+            var done = _modUpdates.ToList();
+            foreach (var u in done) GitHubUpdater.InstallMod(u, GameDir!);
+            _modUpdates.Clear();
+            RefreshMods();
+            FlagModRows();
+            UpdateInfo = $"Updated {done.Count} mod(s): " + string.Join(", ", done.Select(u => $"{u.Name}→{u.AvailableVersion}")) + " (restart the game).";
+        }
+        catch (Exception e) { UpdateInfo = "Mod update failed: " + e.Message; }
+    }
+
+    [RelayCommand]
+    private async Task UpdateLauncher()
+    {
+        UpdateInfo = "Checking GitHub for a launcher update…";
+        try
+        {
+            var c = await GitHubUpdater.CheckLauncher();
+            LauncherHasUpdate = c.HasUpdate;
+            if (!c.HasUpdate) { UpdateInfo = c.Message ?? $"Launcher is up to date (v{c.Current}). ✓"; return; }
+            UpdateInfo = await GitHubUpdater.SelfUpdateLauncher(c);
+        }
+        catch (Exception e) { UpdateInfo = "Launcher update failed: " + e.Message; }
     }
 
     private static Stream OpenBase()
@@ -221,6 +307,11 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedGuideChanged(string value) => LoadGuide();
 
     private bool ValidGame => GamePaths.IsValidGameDir(GameDir);
+
+    // Linux Steam launch option (shown on the Setup tab so users can copy the exact line).
+    // Recommended = Proton + winhttp (same loader as Windows; works on every setup).
+    public bool IsLinux => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux);
+    public string LinuxLaunchOption => "WINEDLLOVERRIDES=\"winhttp=n,b\" %command%";
 
     partial void OnGameDirChanged(string? value) { Persist(); RefreshMods(); }
     partial void OnWorkspaceDirChanged(string? value) { Persist(); RefreshWorkspaceMods(); }
