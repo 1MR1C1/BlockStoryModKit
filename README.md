@@ -17,7 +17,7 @@ They're self-contained (the .NET runtime is bundled in), so there's nothing else
 
 - **Launcher** — finds your Block Story install, shows the mods you have installed, lets you turn each on or off (Core stays on), install a mod someone shared (a single `.dll`, a `.zip` pack, or a folder of DLLs), uninstall mods, and launch the game through Steam.
 - **Easy Mod (no code)** — pick what it should do (info panel, message popup, or a heal key), pick a key, give it a name, and it generates, builds and installs a complete working mod for you. No C# needed.
-- **Mod Builder** — sets up a self-contained mod workspace, scaffolds a new mod from a starter template (a UI panel, a bare plugin, or a keybind-action), builds it, and installs it into the game. It lists the mods in your workspace so you can edit, rebuild, open the folder, or delete each one — the whole edit → build → test loop from the UI.
+- **Mod Builder** — sets up a self-contained mod workspace, scaffolds a new mod from a starter template (a UI panel, a bare plugin, a keybind-action, a Harmony patch, a block watcher, a reskinned **wild creature**, or a rideable **pet/mount**), builds it, and installs it into the game. It lists the mods in your workspace so you can edit, rebuild, open the folder, or delete each one — the whole edit → build → test loop from the UI.
 - **Toolbox docs** — `docs/TOOLBOX-SDK.md` covers the Core API your mods build against.
 
 ## Build from source

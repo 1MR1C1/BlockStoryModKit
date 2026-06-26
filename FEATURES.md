@@ -1,8 +1,8 @@
 # Block Story Mod Kit — Feature List (v1.0 beta)
 
 An all-in-one desktop app for **installing, managing, building, and sharing mods** for Block Story
-(Steam, Unity 6 / Mono). One download does the lot — no manual file copying, no separate framework setup,
-and an AI that can write mods for you. Works on **Windows and Linux/Proton (incl. Steam Deck)**.
+(Steam, Unity 6 / Mono). One download does the lot — no manual file copying, no separate framework setup.
+Works on **Windows and Linux/Proton (incl. Steam Deck)**.
 
 ---
 
@@ -35,51 +35,41 @@ and an AI that can write mods for you. Works on **Windows and Linux/Proton (incl
   - **Keybind Action** — a rebindable key runs your code.
   - **Harmony Patch** — hook/replace any game method (with a commented example).
   - **Block Watcher** — react to any block placed or broken in the world.
+  - **Wild Creature** — reskin a real game enemy into your own creature: the game's NPCs fight it, it gets the
+    native health/level bar, drops loot + XP, and comes with a placeable spawner + Soul-Catcher catch. Oxygen,
+    daylight-burn, space, resistances and more are all deletable options.
+  - **Pet / Mount** — a tameable, **rideable** pet summoned from a craftable Soul item (recipe + shop price):
+    its own name + inventory, climbs steps, auto-attacks, and its soul shows your creature everywhere.
 - Plain-English description of each template right under the picker.
 - **One-button "Make my mod"**: creates the project, compiles it, and installs it into your game.
 - Auto-creates and sets up the workspace on first build — zero setup for newcomers.
 - **Your mods** list with per-mod **Edit** (opens in VS Code / your editor), **Rebuild + Install**, **Open folder**,
-  **Delete**, plus **View code** (in-app) and **🤖 Explain** (AI explains the mod in plain English).
+  **Delete**, plus **View code** in-app.
 - Live build output with clear success/error reporting.
 
-## 4. 🤖 AI Mod Builder — describe it, AI writes it
-- **Describe a mod in plain English** → the AI writes the code → it compiles → if it errors, the AI reads the
-  compiler errors and **fixes itself** (up to 3 rounds) → it installs into your game.
-- **Chat to refine** — after the first build, keep a conversation: "make it stronger", "also play a sound" — it
-  edits the same mod and rebuilds.
-- **🤖 AI fix** — point the AI at a mod that won't compile and let it repair the build errors.
-- **Grounded in the real game** — every request is fed the relevant slice of the game's actual API, so the AI
-  uses real classes/methods/IDs instead of guessing.
-- **Four backends, switchable from the panel:**
-  - **Claude Code** — uses your existing Claude subscription via the installed CLI. **No API key needed.**
-  - **Anthropic (Claude)** — your own API key.
-  - **OpenAI** — your own API key.
-  - **Ollama (local)** — free, offline, no key.
-- **One-click free local AI setup** — installs Ollama and downloads a coding model for you, and
-  **auto-picks the right model size for your hardware** (detects NVIDIA / AMD / Intel GPU VRAM, or RAM).
-- Bring-your-own keys are stored only in your local config; nothing about your account ships with the app.
-
-## 5. Game API browser — know the whole game
+## 4. Game API browser — know the whole game
 - Reads your game's actual code and indexes **every public class, method, field, and enum** (incl. item & block IDs).
-- **Searchable browser** — look up real game systems (inventory, health, blocks, biomes…) while you write a mod by hand.
-- The same index **grounds the AI** so it references things that really exist.
+- **Searchable browser** — look up real game systems (inventory, health, blocks, biomes…) while you write a mod.
 - Cached for instant loads; one-click re-index after a game update.
 
-## 6. The toolkit (BlockStoryCore) — what mods can do
-A documented API so mods (and the AI) get the common things as one-liners, and can reach *anything* for deep
+## 5. The toolkit (BlockStoryCore) — what mods can do
+A documented API so mods get the common things as one-liners, and can reach *anything* for deep
 total-conversion / overhaul mods:
 - **In-game UI** — a themed Mods page + main-menu button, rebindable keybinds shown in the game's Controls screen.
 - **BSPlayer** — read/set stats & vitals, heal, god mode, teleport.
-- **BSItems** — list items, create/give items.
+- **BSItems / BSModel** — list/create/give items, clone game items, register recipes & icons, build models and
+  render them to icons.
 - **BSWorld** — read/set blocks at coordinates, time of day, weather, world mode.
 - **BSEvents** — hook world load/unload, per-frame tick, and block place/break.
+- **Creature SDK** — **BSReskin** (wild creatures), **BSSpawner** (spawner block + soul-catch), **BSPet**
+  (rideable soul pets), **BSMob** (pure code-mobs) — the full Xenor-style creature toolkit.
 - **BSReflect** — reach any game system by name (the backbone for overhaul mods).
 - **BSPatch** — easy Harmony patching to hook or replace any game method.
 - Full SDK reference included (`docs/TOOLBOX-SDK.md`).
 
-> Note: this beta ships the **tool only** — no mods are bundled. You make your own (by hand or with the AI).
+> Note: this beta ships the **tool only** — no mods are bundled. You make your own.
 
-## 7. Platform & extras
+## 6. Platform & extras
 - **Windows + Linux/Proton + Steam Deck.**
 - **GUI app** and a **command-line tool** (`modkit`) for terminal/scripting users.
 - Custom app icon; single-file, self-contained builds (no separate runtime to install to run the app).
@@ -90,12 +80,7 @@ total-conversion / overhaul mods:
 - **Block Story** (Steam).
 - To **play** with mods: nothing extra (the app installs the framework). Linux needs one Steam launch option.
 - To **build** mods: the **.NET 8 SDK** (the app auto-detects it and tells you if it's missing — not needed just to play).
-- To use the **AI Builder**: one backend — a Claude subscription (via Claude Code), an Anthropic/OpenAI API key, or local Ollama.
 
 ## Known limitations (beta)
 - Mods load at game **startup** only — installing a mod takes effect on the next restart (no hot-reload).
-- AI-generated mods always **compile** before installing, but you should still review what they do; quality
-  depends on the backend (cloud models are stronger than small local ones).
-- GPU VRAM auto-detection covers NVIDIA, AMD, and Intel on Linux; unknown setups fall back to a RAM-based pick.
 - A pre-existing build workspace may need a one-time "Set up workspace" after a framework update to see new toolkit APIs.
-- AI backends other than local Ollama use **your own** account/keys and may incur their normal costs.

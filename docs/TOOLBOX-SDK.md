@@ -37,6 +37,13 @@ generates a complete mod, sets up the workspace automatically, builds, and insta
 - **Panel** — a rebindable key toggles a themed IMGUI window (good base for a tool with UI).
 - **Minimal** — a bare plugin that just registers on the Mods page; add your own logic.
 - **KeybindAction** — a rebindable key runs an action (no UI).
+- **HarmonyPatch** — a commented example that hooks a game method so your code runs before/after it.
+- **BlockWatcher** — fires a method every time any block is placed or broken.
+- **WildCreature** — a real game enemy reskinned into your creature: the game's own NPCs fight it, it gets
+  the native HP/level bar, and it comes with a placeable spawner + Soul-Catcher catch. Resistances, oxygen,
+  daylight-burn etc. are all deletable lines. (See the creature SDK below.)
+- **PetMount** — a tameable, **rideable** pet summoned from a craftable Soul item (recipe + shop price):
+  click to ride or open its inventory; its own name + inventory, climbs steps, auto-attacks. The full pet.
 
 **Installing / sharing mods** (Launcher tab): a built `.dll` lands in the game automatically, but you can
 also **Install** a shared `.dll` / `.zip` pack / folder, **drag-and-drop** any of those onto the window,
@@ -123,13 +130,22 @@ ButtonSel, Field`. Helpers: `Theme.NumberRow(label, ref buffer, max, ...)`, `The
 Textures are `HideAndDontSave` so they survive scene loads. There's a `Theme.Version` that bumps on
 rebuild — cache derived styles against it.
 
-### Game-access helpers (v1.51) — for deep / total-conversion mods
-These wrap verified game calls so you (and the AI Builder) don't have to reverse-engineer them. Names of
-game types/members are browsable in the Mod Kit's **Game API** tab.
+### Game-access helpers — for deep / total-conversion mods
+These wrap verified game calls so you don't have to reverse-engineer them. Names of game types/members are
+browsable in the Mod Kit's **Game API** tab.
 
 - **`BSPlayer`** — `Stat(id)`, `Get(id)`/`GetMax(id)`, `Set(id,val)`, `SetMax(id,val)`, `Heal()`, `God(bool)`,
   `Teleport(Vector3)`, `Pos()`. `id` is `InvStat.Identifier` (Health, Mana, …).
-- **`BSItems`** — `AllNames()`, `SlotOf(name)`, `Create(name,count)`, `Give(name,count)` (into a free slot).
+- **`BSItems`** — read/give: `AllNames()`, `SlotOf(name)`, `Find(name)`, `Create(name,count)`,
+  `Give(name,count)` (into a free slot). Authoring (do these inside `BSItems.WhenReady(...)`, see below):
+  `RegisterClone(template, newName)` (clone a game item into a new one), `SetIcon(name, tex, sprite)`,
+  `RegisterRecipe(name, grid, result)`.
+- **`BSItems.WhenReady(Action)`** — runs your callback once the item database is loaded (and again on each
+  world load). Cloning items / registering recipes straight in `Awake()` is too early and silently fails —
+  always wrap that setup in `WhenReady`.
+- **`BSModel`** — build creature/icon art from code: `Humanoid(name, material)`, `FromBoxes(...)`,
+  `SolidMaterial(color)`, `SkinMaterial(tex)` / `SkinMaterialFromFile(path)`, `TextureFromPng(bytes)` /
+  `LoadPng(path)`, and `RenderIcon(model, size)` (snapshot a model into a transparent icon texture).
 - **`BSWorld`** — `PlayerPos()`, `World()`/`InWorld`, `GetBlock(x,y,z)`, `SetBlock(x,y,z,id)` (id 1 = air),
   `Save()`, `SetTime(hour)`, `SetWeather(cloud,hum,wind)` / `ClearWeather()`/`Rain()`/`Storm()`, `Mode`.
 - **`BSEvents`** — subscribe in `Awake`: `WorldLoaded(IWorld)`, `WorldUnloaded`, `Tick`, `BlockChanged(coord,block)`.
@@ -146,6 +162,63 @@ Overlay.ConfigOpen = false;  // when it closes
 ```
 `Core.MenuInputGuard` then disables the NGUI `UICamera` so clicks don't fall through to the menu buttons
 behind your panel.
+
+## Custom creatures & pets (the creature SDK)
+
+The **WildCreature** and **PetMount** templates are complete, commented starting points — generate one and
+read it first; this is the reference. Your creature's body is built from code with `BSModel`; everything
+else is plumbing in Core.
+
+### Wild creature — reskin a real enemy (`BSReskin`)
+
+Take a real game enemy the NPCs already fight, strip its look + brain, and drape your model + AI on top. You
+inherit native NPC combat (both ways) and the real in-game HP/level bar for free.
+
+```csharp
+BSReskin.Spawn("Barlog", pos, def, BuildModel, opts);   // host MOBType, where, stats, model, options
+```
+
+- **`BSMobDef def`** — `Behaviour` (Passive / Neutral / Hostile), `MaxHealth`, `MoveSpeed`,
+  `AttackDamage/Range/Cooldown`, `SightRange`, distance-based level scaling, a `Loot` table (drops on the
+  ground, not into a bag), and `XpReward` (level-scaled, paid to the player and/or the pet that landed the kill).
+- **`BSReskinOpts opts`** — every hazard is a toggle, defaulting to "your creature shrugs it off":
+  `RequiresOxygen`, `BurnsInDaylight`, `DiesInSpace`. Plus `Regen`, `ModelScale`, `BarLift`, and `Resists`
+  (build with `BSResists.New().Immune(id).Resist(id).Weak(id).Build()`).
+
+### Placeable spawner + soul-catch (`BSSpawner`)
+
+```csharp
+BSItems.WhenReady(() => {
+    BSItems.RegisterClone("Antique Spawner", "My Spawner");       // a craftable spawner item
+    BSSpawner.Register("My Spawner", "Barlog", def, BuildModel, opts);
+});
+```
+
+Placing the item spawns your creature; mining it gives the item back; catching a wild one with the Soul
+Catcher drops a spawner so it's re-placeable. Each spawner gets a stable, name-derived block marker, so two
+creatures can safely share the same host enemy.
+
+### Pet / mount — a rideable soul pet (`BSPet`)
+
+```csharp
+BSItems.WhenReady(() => BSPet.Register(new BSPetDef {
+    SoulItem = "My Soul", CloneFrom = "Alien Dog Soul",
+    DisplayName = "My Pet", Price = 500, Model = BuildModel,
+    MaxHealth = 800f, HpPerLevel = 500f, AttackPerLevel = 15f,
+    Recipe = BuildRecipe,            // optional 3x3 grid; omit = shop-only
+}));
+```
+
+Clones a real pet soul (inheriting the whole summon / ride / saddle system), reskins the summoned pet into
+your creature, and gives it its own name + inventory, step-climbing, click-to-ride, and a rendered icon
+(shown on the soul in the recipe book, inventory, in-hand preview, and the world drop). Equip the soul to
+summon; click the pet to ride or open its inventory. Supply your own `Icon` to override the rendered one.
+
+### A pure code-mob (`BSMob`) — advanced
+
+For a creature that *isn't* a reskin of a real enemy, `BSMob.Define(def)` + `BSMob.Spawn(name, pos)` /
+`BSMob.SpawnAroundPlayer(name, count)` runs a fully custom mob (its own model, `BSMobAI`, and health bar).
+It's less integrated than a reskin (no native bar, no soul-catch), so reach for **WildCreature** first.
 
 ## Reading the world / blocks (advanced, via reflection on game types)
 
@@ -176,7 +249,7 @@ modkit enable|disable <Name>
 modkit uninstall <Name>
 modkit backup                 zip the plugins folder
 modkit setup --base <zip>     install the framework into the game
-modkit new <Name> [--template Panel|Minimal|KeybindAction] [--desc "..."]
+modkit new <Name> [--template Panel|Minimal|KeybindAction|HarmonyPatch|BlockWatcher|WildCreature|PetMount] [--desc "..."]
 modkit recipe <Name> <InfoPanel|MessagePopup|HealKey> [message]   (no-code)
 modkit build <Name>           rebuild a workspace mod and install it
 modkit play

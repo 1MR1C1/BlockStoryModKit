@@ -14,15 +14,6 @@ public sealed class Config
 
     public string? ShareDir { get; set; }
 
-    public string AiProvider { get; set; } = "Anthropic";
-    public string? AnthropicKey { get; set; }
-    public string? OpenAiKey { get; set; }
-    public string AnthropicModel { get; set; } = "claude-sonnet-4-5";
-    public string OpenAiModel { get; set; } = "gpt-4o";
-    public string OllamaEndpoint { get; set; } = "http://localhost:11434";
-    public string OllamaModel { get; set; } = "qwen2.5-coder";
-    public string ClaudeCodeModel { get; set; } = "sonnet";
-
     public static string ConfigPath
     {
         get

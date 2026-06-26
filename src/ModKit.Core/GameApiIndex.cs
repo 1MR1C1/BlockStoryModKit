@@ -194,20 +194,4 @@ public sealed class GameApiIndex
         foreach (var m in t.Members) sb.AppendLine("  " + m);
         return sb.ToString();
     }
-
-    public string ForAiContext(string requestText, int maxTypes = 14, int maxMembersPer = 26)
-    {
-        var hits = Search(requestText, maxTypes);
-        if (hits.Count == 0) return "";
-        var sb = new StringBuilder();
-        sb.AppendLine("RELEVANT GAME API (these symbols REALLY EXIST in this game's Assembly-CSharp — prefer them, and Harmony-patch real methods here instead of inventing names):");
-        foreach (var t in hits)
-        {
-            sb.AppendLine($"--- {t.Kind} {t.FullName} ({t.Assembly}) ---");
-            if (t.EnumValues.Count > 0) sb.AppendLine("  values: " + string.Join(", ", t.EnumValues.Take(40)));
-            foreach (var m in t.Members.Take(maxMembersPer)) sb.AppendLine("  " + m);
-            if (t.Members.Count > maxMembersPer) sb.AppendLine($"  …(+{t.Members.Count - maxMembersPer} more)");
-        }
-        return sb.ToString();
-    }
 }

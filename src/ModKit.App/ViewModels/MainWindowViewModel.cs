@@ -66,25 +66,10 @@ public partial class MainWindowViewModel : ViewModelBase
         ModTemplate.KeybindAction => "A rebindable hotkey runs a block of code (with an ON/OFF toggle). Fill in the action body. No UI.",
         ModTemplate.HarmonyPatch  => "Hooks a game method so your code runs before/after it. Includes a commented example patch to point at a real method.",
         ModTemplate.BlockWatcher  => "Fires a method every time any block is placed or broken. Fill in the OnBlock body to react to the world.",
+        ModTemplate.WildCreature  =>"A WILD creature — a real game enemy reskinned, so the game's own NPCs fight it and it gets the real in-game health/level bar. Includes a placeable spawner + soul-catch. Resistances, oxygen, daylight-burn etc. are all deletable options.",
+        ModTemplate.PetMount      => "A tameable, RIDEABLE pet summoned from a craftable Soul item (with recipe + shop price). Click to ride or open its inventory; it has its own name + inventory, climbs steps and auto-attacks. The full Xenor-style pet.",
         _                         => "A hotkey opens a themed pop-up window. Ready-made UI with a button + live player position — extend the panel.",
     };
-
-    [ObservableProperty] private string _aiModName = "MyAiMod";
-    [ObservableProperty] private string _aiPrompt = "";
-    [ObservableProperty] private string _aiChatInput = "";
-    [ObservableProperty] private string _aiTranscript = "";
-    [ObservableProperty] private bool _aiBusy;
-    [ObservableProperty] private bool _aiHasSession;
-    private AiModSession? _aiSession;
-    public string[] AiProviders { get; } = { "Claude Code", "Anthropic", "OpenAI", "Ollama" };
-    [ObservableProperty] private string _aiProvider = "Anthropic";
-    [ObservableProperty] private string? _anthropicKey;
-    [ObservableProperty] private string? _openAiKey;
-    [ObservableProperty] private string _anthropicModel = AiClient.DefaultAnthropicModel;
-    [ObservableProperty] private string _openAiModel = AiClient.DefaultOpenAiModel;
-    [ObservableProperty] private string _ollamaEndpoint = AiClient.DefaultOllamaEndpoint;
-    [ObservableProperty] private string _ollamaModel = AiClient.DefaultOllamaModel;
-    [ObservableProperty] private string _claudeCodeModel = AiClient.DefaultClaudeCodeModel;
 
     [ObservableProperty] private string? _editorCmd;
     [ObservableProperty] private string? _shareDir;
@@ -117,12 +102,6 @@ public partial class MainWindowViewModel : ViewModelBase
         _workspaceDir = _cfg.WorkspaceDir;
         _dotnetPath = _cfg.DotnetPath;
         if (Enum.TryParse(_cfg.LastTemplate, out ModTemplate t)) _newModTemplate = t;
-        _aiProvider = _cfg.AiProvider; _anthropicKey = _cfg.AnthropicKey; _openAiKey = _cfg.OpenAiKey;
-        _anthropicModel = _cfg.AnthropicModel; _openAiModel = _cfg.OpenAiModel;
-        _ollamaEndpoint = _cfg.OllamaEndpoint; _ollamaModel = _cfg.OllamaModel; _claudeCodeModel = _cfg.ClaudeCodeModel;
-
-        if (_cfg.AiProvider == "Anthropic" && string.IsNullOrWhiteSpace(_cfg.AnthropicKey) && AiClient.FindClaude() != null)
-            _aiProvider = "Claude Code";
         _editorCmd = _cfg.EditorCmd ?? GameLauncher.FindEditor();
         _shareDir = _cfg.ShareDir ?? (Directory.Exists("/home/mrc/BlockStoryMods_Share") ? "/home/mrc/BlockStoryMods_Share" : null);
         RefreshMods();
@@ -316,7 +295,6 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnGameDirChanged(string? value) { Persist(); RefreshMods(); }
     partial void OnWorkspaceDirChanged(string? value) { Persist(); RefreshWorkspaceMods(); }
     partial void OnNewModTemplateChanged(ModTemplate value) { Persist(); OnPropertyChanged(nameof(TemplateBlurb)); }
-    partial void OnAiProviderChanged(string value) => Persist();
 
     private void UpdateSetupStatus()
     {
@@ -494,104 +472,6 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception e) { Status = e.Message; AppendBuild(e.ToString()); }
     }
 
-    [RelayCommand]
-    private async Task GenerateModWithAi()
-    {
-        if (AiBusy) return;
-        if (string.IsNullOrWhiteSpace(AiPrompt)) { Status = "Describe what the mod should do first."; return; }
-        if (!await PrepareAi()) return;
-
-        var (provider, key, model) = ResolveAi();
-        _aiSession = new AiModSession(WorkspaceDir!, AiModName, provider, key, model, OllamaEndpoint, DotnetPath);
-        AiHasSession = true;
-        AiTranscript = "";
-        BuildLog = $"🤖 Asking {AiProvider} to build “{_aiSession.Name}”…\n";
-        await RunAiTurn(_aiSession.OpeningMessage("", AiPrompt), $"Build “{AiModName}”: {AiPrompt}");
-    }
-
-    [RelayCommand]
-    private async Task SendAiMessage()
-    {
-        if (AiBusy) return;
-        if (_aiSession == null) { Status = "Start a mod with “Build with AI” first, then refine it here."; return; }
-        if (string.IsNullOrWhiteSpace(AiChatInput)) return;
-        if (!await PrepareAi()) return;
-        string msg = AiChatInput.Trim();
-        AiChatInput = "";
-        await RunAiTurn(msg, msg);
-    }
-
-    private async Task<bool> PrepareAi()
-    {
-        if (!ValidGame) { Status = "Install the modding framework first (Setup & Help tab)."; SelectedTab = 3; return false; }
-        if (BuildRunner.DotnetVersion(DotnetPath) == null) { Status = "Need the .NET SDK to build mods — install it, then set its path in Settings."; return false; }
-        var (provider, _, _) = ResolveAi();
-        if (provider == ModKit.Core.AiProvider.Anthropic && string.IsNullOrWhiteSpace(AnthropicKey)) { Status = "Set your Anthropic API key in Settings first (or switch backend to “Claude Code” to use your subscription)."; SelectedTab = 2; return false; }
-        if (provider == ModKit.Core.AiProvider.OpenAI && string.IsNullOrWhiteSpace(OpenAiKey)) { Status = "Set your OpenAI API key in Settings first."; SelectedTab = 2; return false; }
-        if (provider == ModKit.Core.AiProvider.ClaudeCode && AiClient.FindClaude() == null) { Status = "Claude Code isn't installed. Install it + run `claude` once to sign in, or pick another backend in Settings."; SelectedTab = 2; return false; }
-
-        if (string.IsNullOrWhiteSpace(WorkspaceDir))
-        {
-            WorkspaceDir = Path.Combine(Path.GetDirectoryName(Config.ConfigPath)!, "workspace");
-            Persist();
-        }
-        if (!WorkspaceInitializer.IsInitialized(WorkspaceDir!))
-        {
-            BuildLog = "Setting up your workspace…\n";
-            await Task.Run(() => WorkspaceInitializer.Init(WorkspaceDir!, GameDir!, AppendBuild));
-        }
-        await EnsureApi();
-        return true;
-    }
-
-    private async Task RunAiTurn(string sessionMessage, string transcriptUserText)
-    {
-        AiBusy = true;
-        AddChat("You", transcriptUserText);
-        Status = "AI is working…";
-        try
-        {
-
-            string apiCtx = ApiContextFor(transcriptUserText);
-            string fullMessage = string.IsNullOrEmpty(apiCtx) ? sessionMessage : apiCtx + "\n\n" + sessionMessage;
-            AiBuildResult res = await _aiSession!.SendAsync(fullMessage, AppendBuild);
-            if (res.Success && ValidGame && File.Exists(res.DllPath))
-            {
-                ModManager.Install(GameDir!, res.DllPath);
-                AppendBuild($"\n✓ Installed {res.Name}.dll into the game's plugins folder.");
-                RefreshMods(); RefreshWorkspaceMods();
-                AddChat("AI", $"✓ Built + installed “{res.Name}” ({res.Attempts} attempt(s)). Restart the game to use it. Tell me what to change next.");
-                Status = $"🎉 “{res.Name}” installed — restart the game (or refine it below).";
-            }
-            else
-            {
-                AddChat("AI", res.Error != null ? "Couldn't build it: " + res.Error.Split('\n')[0] + " — try rephrasing or adding detail." : "Couldn't build it — see Build output.");
-                Status = "AI couldn't build it — refine your request and Send again.";
-                RefreshWorkspaceMods();
-            }
-        }
-        catch (Exception e) { Status = "AI failed: " + e.Message; AppendBuild(e.ToString()); }
-        finally { AiBusy = false; }
-    }
-
-    private (ModKit.Core.AiProvider provider, string? key, string model) ResolveAi()
-    {
-
-        if (!Enum.TryParse<ModKit.Core.AiProvider>((AiProvider ?? "").Replace(" ", ""), out var p)) p = ModKit.Core.AiProvider.Anthropic;
-        string? key = p switch { ModKit.Core.AiProvider.Anthropic => AnthropicKey, ModKit.Core.AiProvider.OpenAI => OpenAiKey, _ => null };
-        string model = p switch
-        {
-            ModKit.Core.AiProvider.Anthropic => AnthropicModel,
-            ModKit.Core.AiProvider.OpenAI => OpenAiModel,
-            ModKit.Core.AiProvider.ClaudeCode => ClaudeCodeModel,
-            _ => OllamaModel,
-        };
-        return (p, key, model);
-    }
-
-    private void AddChat(string who, string text) =>
-        Dispatcher.UIThread.Post(() => AiTranscript += $"{who}: {text}\n\n");
-
     partial void OnSelectedTabChanged(int value) { if (value == 4) _ = EnsureApi(); }
 
     private async Task EnsureApi()
@@ -603,7 +483,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             string game = GameDir!;
             _api = await Task.Run(() => GameApiIndex.LoadOrBuild(game, s => Dispatcher.UIThread.Post(() => ApiStatus = s)));
-            ApiStatus = $"Game API: {_api.Types.Count} types indexed. Search above; results feed the AI too.";
+            ApiStatus = $"Game API: {_api.Types.Count} types indexed. Search above to find real classes/methods/IDs.";
             ApplyApiFilter();
         }
         catch (Exception e) { ApiStatus = "Couldn't index the game API: " + e.Message; }
@@ -622,67 +502,6 @@ public partial class MainWindowViewModel : ViewModelBase
         ApiResults.Clear();
         if (_api == null) return;
         foreach (var t in _api.Search(ApiSearch, 400)) ApiResults.Add(t);
-    }
-
-    private string ApiContextFor(string text) => _api?.ForAiContext(text) ?? "";
-
-    [RelayCommand]
-    private async Task AiFixMod(WorkspaceMod? mod)
-    {
-        if (mod == null || AiBusy) return;
-        if (!await PrepareAi()) return;
-
-        SelectedTab = 1;
-        BuildLog = $"Building “{mod.Name}” to find the errors…\n";
-        var log = new System.Text.StringBuilder();
-        bool ok = await BuildRunner.BuildAsync(DotnetPath, mod.Csproj, l => { AppendBuild(l); log.AppendLine(l); });
-        if (ok) { Status = $"“{mod.Name}” already compiles — nothing to fix."; return; }
-
-        string errs = AiModBuilder.ExtractErrors(log.ToString());
-        string code = File.Exists(mod.MainFile) ? File.ReadAllText(mod.MainFile) : "";
-
-        var (provider, key, model) = ResolveAi();
-        _aiSession = new AiModSession(WorkspaceDir!, mod.Name, provider, key, model, OllamaEndpoint, DotnetPath);
-        AiHasSession = true;
-        AiTranscript = "";
-        AiModName = mod.Name;
-        string msg =
-            $"This Block Story mod \"{mod.Name}\" does NOT compile. Fix the compiler errors and return the COMPLETE corrected file as one ```csharp block.\n\n" +
-            "CURRENT CODE:\n```csharp\n" + code + "\n```\n\nCOMPILER ERRORS:\n" + errs;
-        await RunAiTurn(msg, $"Fix the build errors in “{mod.Name}”");
-    }
-
-    [RelayCommand]
-    private void RecommendLocalModel()
-    {
-        OllamaModel = AiSetup.RecommendModel(s => Status = s);
-        Persist();
-    }
-
-    [RelayCommand]
-    private async Task SetupLocalAi()
-    {
-        if (AiBusy) return;
-        AiBusy = true;
-        SelectedTab = 2;
-        BuildLog = "";
-        Status = "Setting up free local AI…";
-        try
-        {
-
-            if (string.IsNullOrWhiteSpace(OllamaModel) || OllamaModel.Trim() == "qwen2.5-coder")
-                OllamaModel = AiSetup.RecommendModel(AppendBuild);
-            bool ok = await AiSetup.EnsureLocalAiAsync(OllamaEndpoint, OllamaModel, AppendBuild);
-            if (ok)
-            {
-                AiProvider = "Ollama";
-                Persist();
-                Status = "✓ Free local AI is ready — backend set to Ollama. Try the AI Builder (no key needed).";
-            }
-            else Status = "Local AI setup didn't finish — see the log for what to do.";
-        }
-        catch (Exception e) { Status = "Local AI setup failed: " + e.Message; AppendBuild(e.ToString()); }
-        finally { AiBusy = false; }
     }
 
     [RelayCommand]
@@ -716,33 +535,6 @@ public partial class MainWindowViewModel : ViewModelBase
         if (mod == null) { Status = "Pick a mod first."; return; }
         try { BuildLog = $"// ===== {Path.GetFileName(mod.MainFile)} =====\n\n" + File.ReadAllText(mod.MainFile); }
         catch (Exception e) { Status = "Couldn't read source: " + e.Message; }
-    }
-
-    [RelayCommand]
-    private async Task ExplainMod(WorkspaceMod? mod)
-    {
-        mod ??= SelectedWorkspaceMod;
-        if (mod == null || AiBusy) { if (mod == null) Status = "Pick a mod first."; return; }
-        var (provider, key, model) = ResolveAi();
-        if (provider == ModKit.Core.AiProvider.Anthropic && string.IsNullOrWhiteSpace(key)) { Status = "Set an AI backend in Settings (or use Claude Code)."; SelectedTab = 2; return; }
-        if (provider == ModKit.Core.AiProvider.OpenAI && string.IsNullOrWhiteSpace(key)) { Status = "Set your OpenAI key in Settings."; SelectedTab = 2; return; }
-        if (provider == ModKit.Core.AiProvider.ClaudeCode && AiClient.FindClaude() == null) { Status = "Claude Code isn't installed; pick another backend."; SelectedTab = 2; return; }
-
-        string code;
-        try { code = File.ReadAllText(mod.MainFile); } catch (Exception e) { Status = "Couldn't read source: " + e.Message; return; }
-        AiBusy = true;
-        BuildLog = $"🤖 Explaining “{mod.Name}”…\n\n";
-        Status = "AI is reading the mod…";
-        try
-        {
-            var msgs = new List<AiMessage> { new("user", "Explain what this Block Story mod does in plain English, as a few short bullet points (no code). Mention its hotkey/toggle if any.\n\n```csharp\n" + code + "\n```") };
-            string reply = await AiClient.ChatAsync(provider, key, model, OllamaEndpoint,
-                "You explain C# game mods clearly and briefly for someone who isn't a programmer.", msgs);
-            BuildLog += reply;
-            Status = $"Explained “{mod.Name}”.";
-        }
-        catch (Exception e) { Status = "Explain failed: " + e.Message; AppendBuild(e.ToString()); }
-        finally { AiBusy = false; }
     }
 
     [RelayCommand]
@@ -792,9 +584,6 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _cfg.GameDir = GameDir; _cfg.WorkspaceDir = WorkspaceDir; _cfg.DotnetPath = DotnetPath;
         _cfg.LastTemplate = NewModTemplate.ToString();
-        _cfg.AiProvider = AiProvider; _cfg.AnthropicKey = AnthropicKey; _cfg.OpenAiKey = OpenAiKey;
-        _cfg.AnthropicModel = AnthropicModel; _cfg.OpenAiModel = OpenAiModel;
-        _cfg.OllamaEndpoint = OllamaEndpoint; _cfg.OllamaModel = OllamaModel; _cfg.ClaudeCodeModel = ClaudeCodeModel;
         _cfg.EditorCmd = EditorCmd; _cfg.ShareDir = ShareDir;
         _cfg.Save();
     }

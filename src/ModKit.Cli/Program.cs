@@ -135,7 +135,7 @@ static class Cli
 
     static int New(string? game, string? ws, List<string> a)
     {
-        if (!Need(a.Count > 0, "usage: modkit new <Name> [--template Panel|Minimal|KeybindAction|HarmonyPatch|BlockWatcher] [--desc \"...\"]")) return 1;
+        if (!Need(a.Count > 0, "usage: modkit new <Name> [--template Panel|Minimal|KeybindAction|HarmonyPatch|BlockWatcher|WildCreature|PetMount] [--desc \"...\"]")) return 1;
         if (!EnsureWorkspace(ref ws, game)) return 1;
         string name = a[0];
         ModTemplate t = ModTemplate.Panel;
@@ -186,7 +186,7 @@ Uses the same saved settings as the GUI; override with --game DIR / --workspace 
   modkit backup                 zip the plugins folder
   modkit setup --base <zip>     install the framework (BepInEx + Core) into the game
   modkit mods                   list mods in your workspace
-  modkit new <Name> [--template Panel|Minimal|KeybindAction|HarmonyPatch|BlockWatcher] [--desc ""...""]
+  modkit new <Name> [--template Panel|Minimal|KeybindAction|HarmonyPatch|BlockWatcher|WildCreature|PetMount] [--desc ""...""]
   modkit build <Name>           rebuild a workspace mod and install it
   modkit play                   launch the game via Steam");
 }
