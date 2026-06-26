@@ -155,9 +155,6 @@
                     <TextBlock Text="Code editor command for the 'Edit' button (blank = OS default; e.g. code):" Opacity="0.8" Margin="0,6,0,0"/>
                     <TextBox Text="{Binding EditorCmd}" Watermark="code" Width="260" HorizontalAlignment="Left"/>
 
-                    <TextBlock Text="'Check for updates' folder (a folder of newer mod .dlls, e.g. a synced/share folder):" Opacity="0.8" Margin="0,6,0,0"/>
-                    <TextBox Text="{Binding ShareDir}" Watermark="…/BlockStoryMods_Share" Width="520" HorizontalAlignment="Left"/>
-
                     <Button Content="Save settings" Command="{Binding SaveSettingsCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"/>
 
                     <TextBlock Margin="0,16,0,0" TextWrapping="Wrap" Opacity="0.7"

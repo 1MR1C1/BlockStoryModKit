@@ -12,8 +12,6 @@ public sealed class Config
 
     public string? EditorCmd { get; set; }
 
-    public string? ShareDir { get; set; }
-
     public static string ConfigPath
     {
         get

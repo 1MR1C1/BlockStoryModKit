@@ -76,7 +76,6 @@ public partial class MainWindowViewModel : ViewModelBase
     };
 
     [ObservableProperty] private string? _editorCmd;
-    [ObservableProperty] private string? _shareDir;
 
     private GameApiIndex? _api;
     [ObservableProperty] private string _apiSearch = "";
@@ -107,7 +106,6 @@ public partial class MainWindowViewModel : ViewModelBase
         _dotnetPath = _cfg.DotnetPath;
         if (Enum.TryParse(_cfg.LastTemplate, out ModTemplate t)) _newModTemplate = t;
         _editorCmd = _cfg.EditorCmd ?? GameLauncher.FindEditor();
-        _shareDir = _cfg.ShareDir ?? (Directory.Exists("/home/mrc/BlockStoryMods_Share") ? "/home/mrc/BlockStoryMods_Share" : null);
         RefreshMods();
         RefreshWorkspaceMods();
         LoadGuide();
@@ -306,7 +304,7 @@ public partial class MainWindowViewModel : ViewModelBase
         bool core = ValidGame && _allInstalled.Any(m => m.IsCore);
         SetupInfo = $"Game {(ValidGame ? "✓" : "✗")}    Core installed {(core ? "✓" : "✗")}    Workspace {(ws ? "ready ✓" : "not set up ✗")}";
         BaseStatus = BaseInstaller.IsInstalled(GameDir)
-            ? "Framework installed ✓  (BepInEx + Core present)"
+            ? "Framework installed ✓  (BlockStoryCore present)"
             : "Framework not installed — point to the game folder, then click Install.";
     }
 
@@ -588,7 +586,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _cfg.GameDir = GameDir; _cfg.WorkspaceDir = WorkspaceDir; _cfg.DotnetPath = DotnetPath;
         _cfg.LastTemplate = NewModTemplate.ToString();
-        _cfg.EditorCmd = EditorCmd; _cfg.ShareDir = ShareDir;
+        _cfg.EditorCmd = EditorCmd;
         _cfg.Save();
     }
 }
