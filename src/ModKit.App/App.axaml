@@ -2,14 +2,93 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="ModKit.App.App"
              xmlns:local="using:ModKit.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Dark">
 
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
-  
+
+    <!-- Dark "fantasy" palette: deep slate-blues, a blue accent, gold for headings.
+         This re-skins the stock controls in place; the layout itself is unchanged for now. -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <!-- accent (tabs, focus rings, selection) -->
+                    <Color x:Key="SystemAccentColor">#3AA8FF</Color>
+                    <Color x:Key="SystemAccentColorDark1">#2E8FE0</Color>
+                    <Color x:Key="SystemAccentColorDark2">#2576BD</Color>
+                    <Color x:Key="SystemAccentColorDark3">#1C5C96</Color>
+                    <Color x:Key="SystemAccentColorLight1">#5CB8FF</Color>
+                    <Color x:Key="SystemAccentColorLight2">#85CAFF</Color>
+                    <Color x:Key="SystemAccentColorLight3">#ADDBFF</Color>
+
+                    <!-- buttons -->
+                    <SolidColorBrush x:Key="ButtonBackground" Color="#222C39"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2C3A4B"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1A2330"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#171C24"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#3A4A5C"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#3AA8FF"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#2E8FE0"/>
+                    <SolidColorBrush x:Key="ButtonForeground" Color="#DCE6F0"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#BFD2E4"/>
+
+                    <!-- text fields -->
+                    <SolidColorBrush x:Key="TextControlBackground" Color="#141A22"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#161D27"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#161D27"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="#2E3B47"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#3A4A5C"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#3AA8FF"/>
+
+                    <!-- shared brushes the views can reference -->
+                    <SolidColorBrush x:Key="PanelBrush" Color="#161C24"/>
+                    <SolidColorBrush x:Key="PanelBorderBrush" Color="#2A3744"/>
+                    <SolidColorBrush x:Key="HeadingBrush" Color="#D8AF37"/>
+                    <SolidColorBrush x:Key="AccentBrush" Color="#3AA8FF"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+
+        <!-- deep vertical-gradient backdrop -->
+        <Style Selector="Window">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#0E1116"/>
+                    <GradientStop Offset="1" Color="#161C24"/>
+                </LinearGradientBrush>
+            </Setter>
+        </Style>
+
+        <!-- rounded, roomier controls -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="CornerRadius" Value="5"/>
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="CornerRadius" Value="5"/>
+        </Style>
+
+        <!-- tabs: a touch bigger, the accent underline comes from SystemAccentColor above -->
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Padding" Value="14,8"/>
+        </Style>
+
+        <!-- a gold heading class for section titles: Classes="h" -->
+        <Style Selector="TextBlock.h">
+            <Setter Property="Foreground" Value="#D8AF37"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
     </Application.Styles>
 </Application>
