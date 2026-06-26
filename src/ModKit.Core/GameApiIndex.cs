@@ -26,9 +26,9 @@ public sealed class GameApiIndex
     public int Schema { get; set; }
     public DateTime BuiltUtc { get; set; }
 
-    // Index EVERY game-authored assembly so the builder/AI sees the whole game (gameplay, mob AI,
+    // Index EVERY game-authored assembly so the browser shows the whole game (gameplay, mob AI,
     // behaviour trees, navigation, Steam). We exclude only the standard runtime, Unity, and 3rd-party
-    // SDKs — the AI already knows those, and indexing them would bloat the cache + AI context.
+    // SDKs — those aren't game code and indexing them would just bloat the cache.
     static readonly string[] SkipPrefixes =
     {
         "System", "mscorlib", "netstandard", "Mono.", "Microsoft", "Unity",

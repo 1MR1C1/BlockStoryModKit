@@ -170,7 +170,7 @@
                 <DockPanel Margin="10">
                     <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
                         <TextBlock TextWrapping="Wrap" Opacity="0.85"
-                                   Text="One-time setup — installs the modding framework (BepInEx + Doorstop loader + BlockStoryCore) straight into your game, so this launcher is the only thing you need. Set the game folder in Settings first."/>
+                                   Text="One-time setup — installs the BlockStoryCore framework straight into your game, so this launcher is the only thing you need. Set the game folder in Settings first."/>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button Content="Install / update framework" Command="{Binding InstallBaseCommand}" FontWeight="Bold"/>
                             <TextBlock Text="{Binding BaseStatus}" VerticalAlignment="Center" Opacity="0.85"/>
