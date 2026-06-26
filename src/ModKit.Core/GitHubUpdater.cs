@@ -122,7 +122,8 @@ public static class GitHubUpdater
         if (string.IsNullOrEmpty(exe)) return "Couldn't locate the running launcher to update it.";
 
         string neu = exe + ".new";
-        if (!await Download(c.AssetUrl, neu)) return "Download failed.";
+        try { await DownloadTo(c.AssetUrl, neu); }
+        catch (Exception e) { return "Download failed: " + e.Message; }
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             File.SetUnixFileMode(neu, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
                 | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
@@ -147,13 +148,21 @@ public static class GitHubUpdater
 
     private static async Task<bool> Download(string url, string dest)
     {
-        try
-        {
-            byte[] data = await Http.GetByteArrayAsync(url);
-            await File.WriteAllBytesAsync(dest, data);
-            return true;
-        }
+        try { await DownloadTo(url, dest); return true; }
         catch { return false; }
+    }
+
+    // Stream the response straight to disk. The big launcher binary (~90MB) was timing out because the
+    // old path buffered the whole thing under the client's 30s timeout; ResponseHeadersRead + a stream
+    // copy lifts that cap (the per-download token still bounds it so it can't hang forever).
+    private static async Task DownloadTo(string url, string dest)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(15));
+        using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+        resp.EnsureSuccessStatusCode();
+        await using var src = await resp.Content.ReadAsStreamAsync(cts.Token);
+        await using var fs = File.Create(dest);
+        await src.CopyToAsync(fs, cts.Token);
     }
 
     private static Version CurrentLauncherVersion()
