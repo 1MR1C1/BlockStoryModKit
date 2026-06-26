@@ -10,7 +10,7 @@
         Width="860" Height="660" MinWidth="660" MinHeight="500"
         DragDrop.AllowDrop="True"
         Icon="/Assets/modkit.ico"
-        Title="Block Story Mod Kit  —  v1.0 (beta)">
+        Title="{Binding WindowTitle}">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>

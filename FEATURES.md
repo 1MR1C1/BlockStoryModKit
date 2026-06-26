@@ -1,4 +1,4 @@
-# Block Story Mod Kit — Feature List (v1.0 beta)
+# Block Story Mod Kit — Feature List (v1.2.0)
 
 An all-in-one desktop app for **installing, managing, building, and sharing mods** for Block Story
 (Steam, Unity 6 / Mono). One download does the lot — no manual file copying, no separate framework setup.
@@ -81,6 +81,6 @@ total-conversion / overhaul mods:
 - To **play** with mods: nothing extra (the app installs the framework). Linux needs one Steam launch option.
 - To **build** mods: the **.NET 8 SDK** (the app auto-detects it and tells you if it's missing — not needed just to play).
 
-## Known limitations (beta)
+## Known limitations
 - Mods load at game **startup** only — installing a mod takes effect on the next restart (no hot-reload).
 - A pre-existing build workspace may need a one-time "Set up workspace" after a framework update to see new toolkit APIs.

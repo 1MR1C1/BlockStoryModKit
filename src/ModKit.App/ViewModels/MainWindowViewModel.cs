@@ -41,6 +41,10 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly Config _cfg;
 
+    // window title tracks the real build version, so it never goes stale on a release bump
+    public string WindowTitle { get; } = "Block Story Mod Kit  —  v" +
+        (System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "1.2.0");
+
     [ObservableProperty] private string? _gameDir;
     [ObservableProperty] private string? _workspaceDir;
     [ObservableProperty] private string? _dotnetPath;
