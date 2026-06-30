@@ -419,12 +419,13 @@ namespace BlockStoryMod
         // your pet's body. default = a coloured humanoid; recolour it, use a 64x64 skin, or build a custom shape.
         private GameObject BuildModel() => BSModel.Humanoid(""{name}"", BSModel.SolidMaterial(new Color(0.35f, 0.5f, 0.7f)));
 
-        // a simple 3x3 recipe (a centrepiece in a ring of bone). change the items/counts - names must be real game items.
+        // a simple 3x3 recipe: a Dragon Heart + Dragonscale set in bone (no gems - those are the in-game
+        // currency, not a craft resource). change the items/counts - names must be real game items.
         private InvGameItem[,] BuildRecipe()
         {{
             var g = new InvGameItem[3, 3];
             g[0, 0] = BSItems.Create(""Bone"", 5); g[0, 1] = BSItems.Create(""Dragon Heart"", 1); g[0, 2] = BSItems.Create(""Bone"", 5);
-            g[1, 0] = BSItems.Create(""Bone"", 5); g[1, 1] = BSItems.Create(""Diamond"", 3);      g[1, 2] = BSItems.Create(""Bone"", 5);
+            g[1, 0] = BSItems.Create(""Bone"", 5); g[1, 1] = BSItems.Create(""Bone"", 5);          g[1, 2] = BSItems.Create(""Bone"", 5);
             g[2, 0] = BSItems.Create(""Bone"", 5); g[2, 1] = BSItems.Create(""Dragonscale"", 5);  g[2, 2] = BSItems.Create(""Bone"", 5);
             foreach (var c in g) if (c == null) return null;   // an item name didn't resolve -> skip the recipe
             return g;
