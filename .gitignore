@@ -1,0 +1,6 @@
+# This repo holds the Block Story Mod Kit as released binaries only — no source.
+# Whitelist: ignore everything, then allow back just the handful of files we publish.
+/*
+!.gitignore
+!README.md
+!LICENSE
