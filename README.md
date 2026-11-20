@@ -21,7 +21,7 @@ Nothing else to install, just run it.
 - **Game API** - search the game's classes, methods, fields and item/block names while you write a mod.
 - **Setup & Help** - one click framework install, guides, a bug report button, and a quick status check of your game, mods and .NET.
 
-A few looks to pick from in your profile: Fantasy (default), Slate, Charcoal and Neon.
+A few looks to pick from in your profile: Brass (default), Fantasy, Slate, Charcoal and Neon.
 
 ## Requirements
 
